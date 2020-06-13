@@ -1,10 +1,12 @@
-    package com.example.tictactoe;
+    package com.example.tictactoe.ui;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
 
-public class FindGameActivity extends AppCompatActivity {
+import com.example.tictactoe.R;
+
+    public class FindGameActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

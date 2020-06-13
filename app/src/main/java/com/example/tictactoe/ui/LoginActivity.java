@@ -1,4 +1,4 @@
-package com.example.tictactoe;
+package com.example.tictactoe.ui;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -9,6 +9,10 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
+import com.google.firebase.auth.AuthResult;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.example.tictactoe.R;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -18,6 +22,7 @@ public class LoginActivity extends AppCompatActivity {
     private ScrollView formLogin;
     private ProgressBar progressBarLogin;
     private Button btnRegistro;
+    private FirebaseAuth firebaseAuth;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -29,6 +34,7 @@ public class LoginActivity extends AppCompatActivity {
         formLogin = findViewById(R.id.formLogin);
         progressBarLogin = findViewById(R.id.progressBarLogin);
         btnRegistro = findViewById(R.id.btnRegistro);
+        firebaseAuth = FirebaseAuth.getInstance();
         changeLoginFormVisibility(true);
         eventos();
     }
