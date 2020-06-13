@@ -1,4 +1,4 @@
-package com.example.a2dtictactoe;
+package com.example.tictactoe;
 
 import org.junit.Test;
 
