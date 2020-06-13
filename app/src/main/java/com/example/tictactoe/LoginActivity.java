@@ -40,7 +40,15 @@ public class LoginActivity extends AppCompatActivity {
             public void onClick(View v) {
                 String email = editEmail.getText().toString();
                 String password = editPassword.getText().toString();
-                changeLoginFormVisibility(false);
+
+                 if(email.isEmpty()) {
+                    editEmail.setError("El email es obligatorio");
+                } else if(password.isEmpty()){
+                    editPassword.setError("La contraseña es obligatoria");
+                } else {
+                    //TODO: REALIZAR EL LOGIN EN FIREBASE AUTH
+                     changeLoginFormVisibility(false);
+                 }
             }
         });
 
