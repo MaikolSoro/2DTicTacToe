@@ -50,7 +50,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
             btnJugar.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-
+                    changeMenuVisibility(false);
                 }
             });
             btnRanking.setOnClickListener(new View.OnClickListener() {
