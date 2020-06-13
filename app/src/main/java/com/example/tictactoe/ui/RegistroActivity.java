@@ -14,13 +14,16 @@ import android.widget.ScrollView;
 import android.widget.Toast;
 
 import com.example.tictactoe.R;
+import com.example.tictactoe.model.User;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.storage.FirebaseStorage;
 
 public class RegistroActivity extends AppCompatActivity {
 
@@ -30,7 +33,7 @@ public class RegistroActivity extends AppCompatActivity {
     public Button btnRegistro;
 
     public FirebaseAuth firebaseAuth;
-    public FirebaseFirestore firebaseFirestore;
+    public FirebaseFirestore db;
 
     public String name;
     public String email;
@@ -51,6 +54,7 @@ public class RegistroActivity extends AppCompatActivity {
         progressBarRegistre = findViewById(R.id.progressBarRegistre);
 
         firebaseAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
         changeRegistroFormVisibility(true);
         eventos();
     }
@@ -99,12 +103,19 @@ public class RegistroActivity extends AppCompatActivity {
     private  void  updateUI(FirebaseUser user) {
         if( user != null){
             //Almecenar la información del usuario en fireStore
-            //TODO
+            User nuevoUser = new User(name,0,0);
+            db.collection("users")
+                    .document(user.getUid()).set(nuevoUser).addOnSuccessListener(new OnSuccessListener<Void>() {
+                @Override
+                public void onSuccess(Void aVoid) {
 
-            // Navegar hacia la siguiente pantalla de la aplicación
+                    // Navegar hacia la siguiente pantalla de la aplicación
+                    finish();
+                    Intent i = new Intent(RegistroActivity.this, FindGameActivity.class);
+                    startActivity(i);
+                }
+            });
 
-            Intent i = new Intent(RegistroActivity.this, FindGameActivity.class);
-            startActivity(i);
         } else {
             changeRegistroFormVisibility(true);
             editPass.setError("Email y/o contraseña incorrectos");
