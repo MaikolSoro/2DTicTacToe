@@ -1,10 +1,12 @@
     package com.example.tictactoe.ui;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
@@ -15,6 +17,7 @@ import android.widget.Toast;
 import com.example.tictactoe.R;
 import com.example.tictactoe.app.Constantes;
 import com.example.tictactoe.model.Jugada;
+import com.google.android.gms.common.util.concurrent.HandlerExecutor;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -22,8 +25,12 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentChange;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.QuerySnapshot;
 
     public class FindGameActivity extends AppCompatActivity {
@@ -38,6 +45,7 @@ import com.google.firebase.firestore.QuerySnapshot;
     private FirebaseUser firebaseUser;
     private String uid;
     private  String jugadaId;
+    private ListenerRegistration listenerRegistration = null;
         @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -82,7 +90,9 @@ import com.google.firebase.firestore.QuerySnapshot;
                 @Override
                 public void onComplete(@NonNull Task<QuerySnapshot> task) {
                     if(task.getResult().size() == 0) {
-                        //TODO no existen partidas libres, crear una nueva
+                        // no existen partidas libres, crear una nueva
+                        crearNuevaJugada();
+
                     } else {
                         DocumentSnapshot docJugada = task.getResult().getDocuments().get(0);
                         jugadaId = docJugada.getId();
@@ -108,10 +118,55 @@ import com.google.firebase.firestore.QuerySnapshot;
             });
         }
 
+        private void crearNuevaJugada() {
+            tvLoadingMessage.setText("Creando una jugada nueva");
+            Jugada nuevaJugada = new Jugada(uid);
+            db.collection("jugadas").add(nuevaJugada)
+                    .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                        @Override
+                        public void onSuccess(DocumentReference documentReference) {
+                            jugadaId = documentReference.getId();
+                            // Tenemos  creada la jugada, debemos esperar a otro jugador
+                            esperarJugador();
+                        }
+                    }).addOnFailureListener(new OnFailureListener() {
+                @Override
+                public void onFailure(@NonNull Exception e) {
+                    changeMenuVisibility(true);
+                    Toast.makeText(FindGameActivity.this, "Problemas al crear una partida", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        private void esperarJugador() {
+            tvLoadingMessage.setText("Esperando a otro jugador");
+            listenerRegistration = db.collection("jugadas")
+                    .document(jugadaId).addSnapshotListener(new EventListener<DocumentSnapshot>() {
+                        @Override
+                        public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
+                            if( documentSnapshot.get("jugadorDosId").equals("")){
+                                tvLoadingMessage.setText("¡Ya ha llegado un jugador! Comienza la partida");
+                                final Handler handler = new Handler();
+                                final Runnable r = new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        startGame();
+                                    }
+                                };
+                                handler.postDelayed(r,1500);
+
+                            }
+                        }
+                    });
+        }
+
         /*
             Iniciamos la partida
          */
         private  void startGame(){
+            if(listenerRegistration != null) {
+                listenerRegistration.remove();
+            }
             Intent i = new Intent(FindGameActivity.this, GameActivity.class);
             i.putExtra(Constantes.EXTRA_JUGADA_ID, jugadaId);
             startActivity(i);
