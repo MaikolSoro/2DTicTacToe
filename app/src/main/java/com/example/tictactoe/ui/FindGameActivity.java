@@ -14,6 +14,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.airbnb.lottie.LottieAnimationView;
 import com.example.tictactoe.R;
 import com.example.tictactoe.app.Constantes;
 import com.example.tictactoe.model.Jugada;
@@ -46,6 +47,7 @@ import com.google.firebase.firestore.QuerySnapshot;
     private String uid;
     private  String jugadaId;
     private ListenerRegistration listenerRegistration = null;
+    private LottieAnimationView animationView;
         @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -85,6 +87,7 @@ import com.google.firebase.firestore.QuerySnapshot;
 
         private void buscarJugadaLibre() {
             tvLoadingMessage.setText("Buscando partida...");
+            animationView.playAnimation();
             db.collection("jugadas").whereEqualTo("jugadorDosId", "")
                     .get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
                 @Override
@@ -94,25 +97,46 @@ import com.google.firebase.firestore.QuerySnapshot;
                         crearNuevaJugada();
 
                     } else {
-                        DocumentSnapshot docJugada = task.getResult().getDocuments().get(0);
-                        jugadaId = docJugada.getId();
-                        Jugada jugada = docJugada.toObject(Jugada.class);
-                        jugada.setJugadorDosId(uid);
-                        db.collection("jugadas").document(jugadaId).set(jugada)
-                                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                        boolean encontrado = false;
+
+                        for (DocumentSnapshot docJugada : task.getResult().getDocuments()) {
+                            if(docJugada.get("jugadorUnoId").equals(uid)) {
+                                encontrado = true;
+                                jugadaId = docJugada.getId();
+                                Jugada jugada = docJugada.toObject(Jugada.class);
+                                jugada.setJugadorDosId(uid);
+                                db.collection("jugadas").document(jugadaId).set(jugada)
+                                        .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                            @Override
+                                            public void onSuccess(Void aVoid) {
+                                                // iniciamos la partida
+                                                tvLoadingMessage.setText("¡Partida libre encontrada! Comienza la partida");
+                                                animationView.setRepeatCount(0);
+                                                animationView.setAnimation("checked-done.json");
+                                                animationView.playAnimation();
+
+                                                final Handler handler = new Handler();
+                                                final Runnable r = new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        startGame();
+                                                    }
+                                                };
+                                                handler.postDelayed(r, 1500);
+                                            }
+                                        }).addOnFailureListener(new OnFailureListener() {
                                     @Override
-                                    public void onSuccess(Void aVoid) {
-                                        // iniciamos la partida
-                                        startGame();
+                                    public void onFailure(@NonNull Exception e) {
+                                        // muestro el menu
+                                        changeMenuVisibility(true);
+                                        Toast.makeText(FindGameActivity.this, "Hubo algún error al entrar en la partida", Toast.LENGTH_SHORT).show();
                                     }
-                                }).addOnFailureListener(new OnFailureListener() {
-                            @Override
-                            public void onFailure(@NonNull Exception e) {
-                                // muestro el menu
-                                changeMenuVisibility(true);
-                                Toast.makeText(FindGameActivity.this, "Hubo algún error al entrar en la partida", Toast.LENGTH_SHORT).show();
+                                });
+                                break;
                             }
-                        });
+                            if(!encontrado) crearNuevaJugada();
+                        }
+
                     }
                 }
             });
@@ -139,13 +163,18 @@ import com.google.firebase.firestore.QuerySnapshot;
         }
 
         private void esperarJugador() {
-            tvLoadingMessage.setText("Esperando a otro jugador");
+            tvLoadingMessage.setText("Esperando a otro jugador....");
+
             listenerRegistration = db.collection("jugadas")
                     .document(jugadaId).addSnapshotListener(new EventListener<DocumentSnapshot>() {
                         @Override
                         public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
-                            if( documentSnapshot.get("jugadorDosId").equals("")){
+                            if(!documentSnapshot.get("jugadorDosId").equals("")){
                                 tvLoadingMessage.setText("¡Ya ha llegado un jugador! Comienza la partida");
+                                animationView.setRepeatCount(0);
+                                animationView.setAnimation("checked-done.json");
+                                animationView.playAnimation();
+
                                 final Handler handler = new Handler();
                                 final Runnable r = new Runnable() {
                                     @Override
@@ -170,11 +199,13 @@ import com.google.firebase.firestore.QuerySnapshot;
             Intent i = new Intent(FindGameActivity.this, GameActivity.class);
             i.putExtra(Constantes.EXTRA_JUGADA_ID, jugadaId);
             startActivity(i);
+            jugadaId = "";
         }
         /*
             Mostrar el progressBar
          */
     private  void initProgressBar(){
+        animationView = findViewById(R.id.animation_view);
         tvLoadingMessage = findViewById(R.id.textViewLoading);
         progressBar = findViewById(R.id.progressBarJugadas);
 
@@ -196,6 +227,41 @@ import com.google.firebase.firestore.QuerySnapshot;
         @Override
         protected void onResume() {
             super.onResume();
-            changeMenuVisibility(true); // para que se va por defecto el menu
+            changeMenuVisibility(true);
+
         }
+            /*if(jugadaId != ""){
+                changeMenuVisibility(false);
+                esperarJugador();
+            } else {
+                changeMenuVisibility(true); // para que se va por defecto el menu
+
+            }
+        }
+
+             */
+
+        /*
+        Eliminar una jugada, cuando el usuario se salga del juego
+        @Override
+        protected void onStop() {
+
+            if(listenerRegistration != null) {
+                listenerRegistration.remove();
+            }
+            if(jugadaId != ""){
+                db.collection("jugadas").document(jugadaId)
+                        .delete()
+                        .addOnCompleteListener(new OnCompleteListener<Void>() {
+                            @Override
+                            public void onComplete(@NonNull Task<Void> task) {
+                                jugadaId= "";
+                            }
+                        });
+
+            }
+            super.onStop();
+        }
+
+         */
     }
